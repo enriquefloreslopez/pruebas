@@ -57,7 +57,7 @@ sudo bash scripts/preparar-equipo.sh        # lo prepara
 
 ### Notas por sistema
 
-- **Raspberry Pi:** instala «Raspberry Pi OS Lite (64-bit)» y, si puedes, usa un SSD por USB en vez de la microSD para la base de datos.
+- **Raspberry Pi:** instala «Raspberry Pi OS Lite (64-bit)» y, si puedes, usa un SSD por USB en vez de la microSD para la base de datos. La Raspberry Pi 5 usa páginas de memoria de 16 KB (el script muestra «Página: 16384»); la app, PostgreSQL y el túnel no dependen de eso, pero si algún contenedor se cae con un error de «page size», agrega `kernel=kernel8.img` en `/boot/firmware/config.txt` y reinicia para volver a 4 KB.
 - **Windows:** clona con Git normal; `.gitattributes` mantiene los scripts con saltos de línea de Linux. Si editas `.env` con el Bloc de notas, guárdalo con saltos de línea «LF» (en VS Code, abajo a la derecha) para que no se cuele un carácter invisible al final de cada valor.
 
 ## 1. Crear el túnel de Cloudflare

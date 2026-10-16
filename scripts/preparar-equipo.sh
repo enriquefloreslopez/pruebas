@@ -16,7 +16,8 @@ swap_mb=$(awk '/SwapTotal/ {print int($2 / 1024)}' /proc/meminfo)
 kernel=$(uname -m)
 bits=$(getconf LONG_BIT)
 paquetes=$(dpkg --print-architecture 2>/dev/null || echo "?")
-echo "RAM: ${ram_mb} MB · Swap: ${swap_mb} MB · Kernel: ${kernel} · Sistema: ${bits} bits (${paquetes})"
+pagina=$(getconf PAGESIZE)
+echo "RAM: ${ram_mb} MB · Swap: ${swap_mb} MB · Kernel: ${kernel} · Sistema: ${bits} bits (${paquetes}) · Página: ${pagina}"
 
 case "$kernel" in
   x86_64 | aarch64 | arm64) ;;
