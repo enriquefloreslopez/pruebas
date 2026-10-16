@@ -6,6 +6,14 @@ export const site = {
   // Número de WhatsApp con código de país, solo dígitos (ej. 5213312345678).
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "",
   currency: "mxn",
+  // Datos del responsable que aparecen en Términos, Privacidad y Reembolsos.
+  legal: {
+    owner: "[Nombre completo o razón social]",
+    address: "[Calle y número, colonia, ciudad, estado, C.P.]",
+    email: "[correo de contacto]",
+    city: "[Ciudad, Estado]",
+    updatedAt: "16 de octubre de 2026",
+  },
 };
 
 export type PlanId = "presencia" | "agenda" | "pro";

@@ -167,6 +167,14 @@ export function BookingForm() {
       >
         {sending ? "Reservando…" : "Reservar cita"}
       </button>
+
+      <p className="text-xs text-stone-500 sm:col-span-2">
+        Al reservar aceptas el{" "}
+        <a href="/privacidad" className="underline underline-offset-2">
+          aviso de privacidad
+        </a>
+        .
+      </p>
     </form>
   );
 }

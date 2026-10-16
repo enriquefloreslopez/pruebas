@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckoutButton } from "@/components/CheckoutButton";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { SiteFooter } from "@/components/SiteFooter";
 import { formatPrice, plans, site, whatsappLink } from "@/lib/site";
 
 const problems = [
@@ -45,7 +46,7 @@ const faqs = [
   },
   {
     q: "¿Puedo cancelar cuando quiera?",
-    a: "Sí. Los planes mensuales no tienen plazo forzoso; cancelas antes de tu siguiente cobro.",
+    a: "Sí. Los planes mensuales no tienen plazo forzoso y tienen garantía de 7 días: si cancelas en ese tiempo te devolvemos tu primer pago.",
   },
   {
     q: "¿Cómo pago?",
@@ -197,6 +198,17 @@ export default function Home() {
                 </div>
               ))}
             </div>
+            <p className="mt-10 text-center text-sm text-stone-500">
+              Al contratar aceptas nuestros{" "}
+              <Link href="/terminos" className="underline underline-offset-2">
+                Términos y condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link href="/reembolsos" className="underline underline-offset-2">
+                Política de cancelaciones y reembolsos
+              </Link>
+              . Planes mensuales con garantía de 7 días.
+            </p>
           </div>
         </section>
 
@@ -225,11 +237,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="border-t border-stone-200 py-8 text-center text-sm text-stone-500">
-        <p>
-          {site.name} · {site.tagline}
-        </p>
-      </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -98,6 +98,10 @@ export default function DemoEstetica() {
         <Link href="/" className="font-semibold text-teal-700">
           {site.name}
         </Link>
+        {" · "}
+        <Link href="/privacidad" className="underline underline-offset-2">
+          Aviso de privacidad
+        </Link>
       </footer>
     </>
   );
