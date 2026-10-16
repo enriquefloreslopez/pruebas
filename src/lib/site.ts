@@ -8,10 +8,10 @@ export const site = {
   currency: "mxn",
   // Datos del responsable que aparecen en Términos, Privacidad y Reembolsos.
   legal: {
-    owner: "[Nombre completo o razón social]",
-    address: "[Calle y número, colonia, ciudad, estado, C.P.]",
-    email: "[correo de contacto]",
-    city: "[Ciudad, Estado]",
+    owner: "Enrique Flores Lopez",
+    address: "Morelos 323, Salamanca, Guanajuato, C.P. 36700",
+    email: "eflkikes13@gmail.com",
+    city: "Salamanca, Guanajuato",
     updatedAt: "16 de octubre de 2026",
   },
 };
