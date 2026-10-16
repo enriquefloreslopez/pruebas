@@ -46,10 +46,19 @@ Con 1 GB de RAM funciona usando la imagen compilada y swap; con 2 GB va cómodo.
 ### Preparar un equipo pequeño
 
 ```bash
-sudo bash scripts/preparar-equipo.sh
+bash scripts/preparar-equipo.sh --revisar   # solo revisa si el equipo es compatible
+sudo bash scripts/preparar-equipo.sh        # lo prepara
 ```
 
-Revisa que el procesador sea compatible, crea 2 GB de swap si hay menos de 3 GB de RAM, hace que el sistema use el swap solo cuando haga falta (cuida tarjetas SD y discos baratos) y limita los registros del sistema a 100 MB.
+- Revisa que **el sistema instalado** sea de 64 bits, no solo el procesador. Raspberry Pi OS de 32 bits arranca con kernel de 64 bits y engaña a `uname -m`; ahí Docker bajaría imágenes de 32 bits y el túnel de Cloudflare no existe para 32 bits.
+- Crea 2 GB de swap si hay menos de 3 GB de RAM y hace que el sistema lo use solo cuando haga falta (cuida tarjetas SD y discos baratos).
+- En Raspberry Pi activa el control de memoria del kernel (`cgroup_enable=memory cgroup_memory=1`); sin él, Docker ignora los límites de memoria. Pide reiniciar.
+- Limita los registros del sistema a 100 MB.
+
+### Notas por sistema
+
+- **Raspberry Pi:** instala «Raspberry Pi OS Lite (64-bit)» y, si puedes, usa un SSD por USB en vez de la microSD para la base de datos.
+- **Windows:** clona con Git normal; `.gitattributes` mantiene los scripts con saltos de línea de Linux. Si editas `.env` con el Bloc de notas, guárdalo con saltos de línea «LF» (en VS Code, abajo a la derecha) para que no se cuele un carácter invisible al final de cada valor.
 
 ## 1. Crear el túnel de Cloudflare
 
