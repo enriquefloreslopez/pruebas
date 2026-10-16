@@ -16,13 +16,26 @@ export type EnlaceId = (typeof ENLACES)[number]["id"];
 
 export type PruebaIA = { fecha: string; asistente: string; consulta: string; aparece: boolean };
 
+// Programa de recomendados: cada negocio decide sus premios.
+export type ProgramaReferidos = {
+  activo: boolean;
+  // Lo que gana quien recomienda al juntar `meta` amigos atendidos.
+  premioRecomienda: string;
+  // Lo que recibe el amigo en su primera visita.
+  premioAmigo: string;
+  meta: number;
+};
+
 export type SetupDatos = {
   pasos: Record<string, boolean>;
   enlaces: Partial<Record<EnlaceId, string>>;
   pruebas: PruebaIA[];
+  referidos: ProgramaReferidos;
 };
 
-export const SETUP_VACIO: SetupDatos = { pasos: {}, enlaces: {}, pruebas: [] };
+export const REFERIDOS_VACIO: ProgramaReferidos = { activo: false, premioRecomienda: "", premioAmigo: "", meta: 1 };
+
+export const SETUP_VACIO: SetupDatos = { pasos: {}, enlaces: {}, pruebas: [], referidos: REFERIDOS_VACIO };
 
 export type Paso = { id: string; titulo: string; detalle: string; herramienta?: { texto: string; url: string } };
 export type Seccion = { id: string; titulo: string; descripcion: string; pasos: Paso[] };
@@ -249,5 +262,16 @@ export function limpiarSetup(entrada: unknown): SetupDatos {
     )
     .slice(-100)
     .map((p) => ({ ...p, asistente: p.asistente.slice(0, 30), consulta: p.consulta.slice(0, 200) }));
-  return { pasos, enlaces, pruebas };
+  const r = (e.referidos ?? {}) as Partial<ProgramaReferidos>;
+  const texto = (v: unknown) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, 80) : "");
+  const premioRecomienda = texto(r.premioRecomienda);
+  const premioAmigo = texto(r.premioAmigo);
+  const referidos: ProgramaReferidos = {
+    // Sin premio definido el programa no puede estar activo.
+    activo: r.activo === true && !!premioRecomienda,
+    premioRecomienda,
+    premioAmigo,
+    meta: Number.isInteger(r.meta) ? Math.min(10, Math.max(1, r.meta!)) : 1,
+  };
+  return { pasos, enlaces, pruebas, referidos };
 }

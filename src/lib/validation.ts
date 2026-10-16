@@ -24,3 +24,9 @@ export function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+
+// Guarda los teléfonos de México siempre a 10 dígitos, para reconocer al mismo cliente
+// aunque escriba el número con o sin +52.
+export function telefonoMx(digits: string): string {
+  return digits.length > 10 && digits.startsWith("52") ? digits.slice(-10) : digits;
+}

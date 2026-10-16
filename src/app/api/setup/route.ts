@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getNegocio, type Negocio } from "@/data/catalogo";
 import { esAdmin, llavePanel } from "@/lib/acceso";
 import { db } from "@/lib/db";
-import { consultasIA, fichaOficial, limpiarSetup, type SetupDatos } from "@/lib/setup";
+import { SETUP_VACIO, consultasIA, fichaOficial, limpiarSetup, type SetupDatos } from "@/lib/setup";
 import { etiquetaSetup, guardarSetup, leerSetup } from "@/lib/setup-db";
 import { siteUrl } from "@/lib/site";
 
@@ -81,8 +81,8 @@ export async function GET(request: NextRequest) {
   const llave = llavePanel(negocio.slug);
   return NextResponse.json({
     guardable: setup !== null,
-    datos: setup ?? { pasos: {}, enlaces: {}, pruebas: [] },
-    chequeos: chequeos(negocio, setup ?? { pasos: {}, enlaces: {}, pruebas: [] }, !!(await db().catch(() => null))),
+    datos: setup ?? SETUP_VACIO,
+    chequeos: chequeos(negocio, setup ?? SETUP_VACIO, !!(await db().catch(() => null))),
     ficha: fichaOficial(negocio, base),
     consultas: consultasIA(negocio),
     panel: llave ? `${base}/panel/${negocio.slug}?k=${llave}` : null,

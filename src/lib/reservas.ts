@@ -19,6 +19,7 @@ type DatosCita = {
   email: string | null;
   origen: string;
   estado?: "nueva" | "confirmada";
+  referidoPor?: string | null;
 };
 
 // Aparta una cita si el servicio completo cabe en ese horario. Devuelve el id o null si ya no hay lugar.
@@ -32,10 +33,10 @@ export async function apartar(sql: postgres.Sql, negocio: Negocio, datos: DatosC
     )?.libre;
     if (!libre) return null;
     const [fila] = await tx<{ id: string }[]>`
-      insert into citas (negocio, servicio_id, servicio, precio, minutos, fecha, hora, cliente, telefono, email, origen, estado)
+      insert into citas (negocio, servicio_id, servicio, precio, minutos, fecha, hora, cliente, telefono, email, origen, estado, referido_por)
       values (${negocio.slug}, ${datos.servicio.id}, ${datos.servicio.nombre}, ${datos.servicio.precio},
               ${datos.servicio.minutos}, ${datos.fecha}, ${datos.hora}, ${datos.cliente}, ${datos.telefono},
-              ${datos.email}, ${datos.origen}, ${datos.estado ?? "nueva"})
+              ${datos.email}, ${datos.origen}, ${datos.estado ?? "nueva"}, ${datos.referidoPor ?? null})
       returning id
     `;
     return fila.id;

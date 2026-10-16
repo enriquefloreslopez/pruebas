@@ -3,9 +3,11 @@ import { getNegocio } from "@/data/catalogo";
 import { ahoraEn, ESTADOS, horariosDelDia, sumarDias, zonaDe, type Estado } from "@/lib/agenda";
 import { puedeVerPanel } from "@/lib/acceso";
 import { db, SELECT_CITA, type Cita } from "@/lib/db";
+import { avances, codigoDe, linkInvitacion } from "@/lib/referidos";
 import { apartar, bloquear } from "@/lib/reservas";
+import { REFERIDOS_VACIO } from "@/lib/setup";
 import { leerSetup } from "@/lib/setup-db";
-import { cleanPhone, cleanText } from "@/lib/validation";
+import { cleanPhone, cleanText, telefonoMx } from "@/lib/validation";
 
 // Citas del negocio desde hace 7 días hasta 30 días adelante, y visitas atendidas por cliente.
 export async function GET(request: NextRequest) {
@@ -32,11 +34,26 @@ export async function GET(request: NextRequest) {
     `,
   ]);
   const setup = await leerSetup(slug).catch(() => null);
+  const programa = setup?.referidos ?? REFERIDOS_VACIO;
+
+  // Recomendados: quién invitó a cada cita y qué premios tiene cada cliente.
+  const telefonos = [...new Set(citas.map((c) => c.telefono).filter(Boolean))];
+  const codigos = [...new Set(citas.map((c) => c.referido_por).filter((c): c is string => !!c))];
+  const [mapa, quienes] = await Promise.all([
+    telefonos.length ? avances(sql, slug, programa.meta, telefonos) : new Map(),
+    codigos.length
+      ? sql<{ codigo: string; nombre: string }[]>`select codigo, nombre from referidos where codigo in ${sql(codigos)}`
+      : [],
+  ]);
+
   return NextResponse.json({
     hoy,
     citas,
     visitas: Object.fromEntries(visitas.map((v) => [v.telefono, v.total])),
     resenas: setup?.enlaces.resenas ?? null,
+    programa,
+    recompensas: Object.fromEntries(mapa),
+    invitadores: Object.fromEntries(quienes.map((q) => [q.codigo, q.nombre])),
   });
 }
 
@@ -48,6 +65,8 @@ export async function POST(request: NextRequest) {
   if (!negocio || !puedeVerPanel(slug, body?.k)) {
     return NextResponse.json({ error: "Acceso no válido." }, { status: 401 });
   }
+
+  if (body?.accion === "canjear" || body?.accion === "invitar") return accionRecomendados(negocio.slug, body, request);
 
   const fecha = cleanText(body?.fecha, 10);
   const hora = cleanText(body?.hora, 5);
@@ -74,7 +93,8 @@ export async function POST(request: NextRequest) {
 
   const servicio = negocio.servicios.find((s) => s.id === body?.servicio);
   const cliente = cleanText(body?.nombre, 80);
-  const telefono = body?.telefono ? cleanPhone(body.telefono) : "";
+  const limpio = body?.telefono ? cleanPhone(body.telefono) : "";
+  const telefono = limpio ? telefonoMx(limpio) : limpio;
   if (!servicio || cliente.length < 2 || telefono === null) {
     return NextResponse.json({ error: "Revisa el servicio, el nombre y el teléfono." }, { status: 400 });
   }
@@ -113,5 +133,40 @@ export async function PATCH(request: NextRequest) {
     returning id
   `.catch(() => []);
   if (filas.length === 0) return NextResponse.json({ error: "Cita no encontrada." }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
+
+// Entregar un premio ganado, o generar el link de invitación de un cliente.
+async function accionRecomendados(
+  negocio: string,
+  body: { accion: string; telefono?: unknown; nombre?: unknown },
+  request: NextRequest,
+) {
+  const limpio = cleanPhone(body.telefono);
+  const telefono = limpio && telefonoMx(limpio);
+  if (!telefono) return NextResponse.json({ error: "Teléfono no válido." }, { status: 400 });
+
+  const sql = await db();
+  if (!sql) return NextResponse.json({ error: "Base de datos no configurada." }, { status: 503 });
+  const programa = (await leerSetup(negocio).catch(() => null))?.referidos ?? REFERIDOS_VACIO;
+  if (!programa.activo) return NextResponse.json({ error: "El programa de recomendados no está activo." }, { status: 400 });
+
+  if (body.accion === "invitar") {
+    const codigo = await codigoDe(sql, negocio, telefono, cleanText(body.nombre, 80) || "Cliente");
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? request.nextUrl.origin;
+    return NextResponse.json({ ok: true, link: linkInvitacion(base, negocio, codigo), progreso: `${base}/r/${codigo}` });
+  }
+
+  // El candado evita entregar el mismo premio dos veces si se toca el botón muy rápido.
+  const entregado = await sql.begin(async (tx) => {
+    await tx`select pg_advisory_xact_lock(hashtext(${`canje|${negocio}|${telefono}`}))`;
+    const avance = (await avances(tx, negocio, programa.meta, [telefono])).get(telefono);
+    if (!avance || avance.disponibles < 1) return false;
+    await tx`insert into canjes (negocio, telefono) values (${negocio}, ${telefono})`;
+    return true;
+  });
+  if (!entregado) {
+    return NextResponse.json({ error: "Este cliente no tiene premios pendientes." }, { status: 400 });
+  }
   return NextResponse.json({ ok: true });
 }

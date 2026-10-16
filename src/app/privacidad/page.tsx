@@ -33,6 +33,10 @@ export default function Privacidad() {
           electrónico (opcional), servicio, fecha y hora de la cita.
         </li>
         <li>
+          <b>Si participas en el programa de recomendados:</b> quién te invitó o a quién invitaste, para
+          entregar las recompensas. A tus amigos solo les mostramos tu primer nombre.
+        </li>
+        <li>
           <b>Si nos contactas:</b> los datos que nos compartas por correo o WhatsApp.
         </li>
       </ul>

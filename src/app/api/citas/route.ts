@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getNegocio } from "@/data/catalogo";
 import { fechaValida, formatoFecha, horariosFuturos, limpiarOrigen } from "@/lib/agenda";
 import { db } from "@/lib/db";
+import { buscarCodigo, codigoDe, linkInvitacion, programaDe } from "@/lib/referidos";
 import { apartar } from "@/lib/reservas";
 import { emailFrom, getResend, ownerEmail } from "@/lib/services";
 import { formatPrice, whatsappLink } from "@/lib/site";
-import { cleanPhone, cleanText, escapeHtml, isEmail } from "@/lib/validation";
+import { cleanPhone, cleanText, escapeHtml, isEmail, telefonoMx } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -19,7 +20,8 @@ export async function POST(request: Request) {
   const fecha = cleanText(body?.fecha, 10);
   const hora = cleanText(body?.hora, 5);
   const cliente = cleanText(body?.nombre, 80);
-  const telefono = cleanPhone(body?.telefono);
+  const limpio = cleanPhone(body?.telefono);
+  const telefono = limpio && telefonoMx(limpio);
   const email = cleanText(body?.email, 254).toLowerCase();
   const origen = limpiarOrigen(body?.origen);
 
@@ -44,6 +46,13 @@ export async function POST(request: Request) {
     );
   }
 
+  // Si llegó invitado por alguien, se guarda el código (nunca el de la misma persona).
+  const programa = await programaDe(negocio.slug);
+  const codigoInvitacion = typeof body?.referido === "string" ? body.referido.toUpperCase() : "";
+  const quienInvita = programa.activo && codigoInvitacion ? await buscarCodigo(sql, codigoInvitacion) : null;
+  const referidoPor =
+    quienInvita && quienInvita.negocio === negocio.slug && quienInvita.telefono !== telefono ? quienInvita.codigo : null;
+
   const id = await apartar(sql, negocio, {
     servicio: servicio!,
     fecha,
@@ -52,6 +61,7 @@ export async function POST(request: Request) {
     telefono: telefono!,
     email: email || null,
     origen,
+    referidoPor,
   });
 
   if (!id) {
@@ -65,10 +75,27 @@ export async function POST(request: Request) {
   const resumen = `${servicio!.nombre} (${formatPrice(servicio!.precio)}) el ${cuando}`;
   await avisarPorCorreo({ negocioNombre: negocio.nombre, negocioEmail: negocio.email, resumen, cliente, telefono: telefono!, email, origen });
 
+  // Cada cliente recibe su link personal para invitar amigos.
+  let invitacion = null;
+  if (programa.activo) {
+    const codigo = await codigoDe(sql, negocio.slug, telefono!, cliente).catch(() => null);
+    if (codigo) {
+      const base = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+      invitacion = {
+        link: linkInvitacion(base, negocio.slug, codigo),
+        progreso: `${base}/r/${codigo}`,
+        premioRecomienda: programa.premioRecomienda,
+        premioAmigo: programa.premioAmigo,
+        meta: programa.meta,
+      };
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     id,
     resumen,
+    invitacion,
     whatsapp: whatsappLink(
       `Hola, soy ${cliente}. Aparté ${resumen} en ${negocio.nombre}. ¡Nos vemos!`,
       negocio.whatsapp,

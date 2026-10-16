@@ -268,8 +268,81 @@ export function Setup({ slug }: { slug: string }) {
         <p className="mt-2 text-xs text-stone-500">Solo links que empiecen con https://. Se guarda al salir de cada campo.</p>
       </Bloque>
 
+      <Bloque
+        titulo="4. Programa de recomendados"
+        descripcion="Los clientes invitan amigos con su link personal y ganan premios. El premio lo decide el negocio. Solo cuenta cuando el amigo viene por primera vez y lo marcan como atendido."
+      >
+        <label className="flex items-center gap-3 rounded-xl bg-stone-50 p-3 text-sm font-semibold">
+          <input
+            type="checkbox"
+            checked={datos.referidos.activo}
+            onChange={(e) => cambiar((d) => ({ ...d, referidos: { ...d.referidos, activo: e.target.checked } }))}
+            className="h-5 w-5 accent-violet-600"
+          />
+          Programa activo
+          {datos.referidos.activo && !datos.referidos.premioRecomienda && (
+            <span className="font-normal text-amber-800">· Escribe el premio para activarlo</span>
+          )}
+        </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">Premio para quien recomienda</span>
+            <input
+              defaultValue={datos.referidos.premioRecomienda}
+              placeholder="Un corte gratis"
+              maxLength={80}
+              onBlur={(e) => {
+                const v = e.target.value;
+                cambiar((d) => ({ ...d, referidos: { ...d.referidos, premioRecomienda: v } }));
+              }}
+              className="w-full rounded-xl border border-stone-300 px-3 py-2 outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">
+              Premio para el amigo <span className="font-normal text-stone-500">(opcional)</span>
+            </span>
+            <input
+              defaultValue={datos.referidos.premioAmigo}
+              placeholder="$30 de descuento"
+              maxLength={80}
+              onBlur={(e) => {
+                const v = e.target.value;
+                cambiar((d) => ({ ...d, referidos: { ...d.referidos, premioAmigo: v } }));
+              }}
+              className="w-full rounded-xl border border-stone-300 px-3 py-2 outline-none focus:border-violet-600 focus:ring-2 focus:ring-violet-600/20"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">¿Cuántos amigos para ganar el premio?</span>
+            <select
+              value={datos.referidos.meta}
+              onChange={(e) => {
+                const meta = Number(e.target.value);
+                cambiar((d) => ({ ...d, referidos: { ...d.referidos, meta } }));
+              }}
+              className="w-full rounded-xl border border-stone-300 px-3 py-2"
+            >
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>
+                  {n} {n === 1 ? "amigo" : "amigos"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="mt-4 rounded-2xl bg-violet-50 p-4 text-sm text-violet-950">
+          <p className="font-semibold">Ideas que suelen funcionar</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            <li>Quien recomienda: un servicio gratis al juntar 3 amigos. El amigo: un descuento chico en su primera visita.</li>
+            <li>Premios que cuesten poco al negocio pero se sientan valiosos: un extra (barba, cejas, diseño) o un producto.</li>
+            <li>El negocio entrega el premio desde la agenda con «Entregar premio»; queda registrado.</li>
+          </ul>
+        </div>
+      </Bloque>
+
       {SECCIONES.map((seccion, i) => (
-        <Bloque key={seccion.id} titulo={`${i + 4}. ${seccion.titulo}`} descripcion={seccion.descripcion}>
+        <Bloque key={seccion.id} titulo={`${i + 5}. ${seccion.titulo}`} descripcion={seccion.descripcion}>
           <ul className="space-y-2">
             {seccion.pasos.map((p) => (
               <li key={p.id} className="flex gap-3 rounded-xl p-3 ring-1 ring-stone-200 has-[:checked]:bg-emerald-50 has-[:checked]:ring-emerald-200">

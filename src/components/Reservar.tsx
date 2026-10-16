@@ -7,7 +7,9 @@ import { ahoraEn, DIAS_MAXIMOS, diaSemana, sumarDias } from "@/lib/agenda";
 import { formatPrice, whatsappLink } from "@/lib/site";
 
 type Hora = { hora: string; libre: boolean };
-type Resultado = { resumen: string; whatsapp: string };
+type Invitacion = { link: string; progreso: string; premioRecomienda: string; premioAmigo: string; meta: number };
+type Resultado = { resumen: string; whatsapp: string; invitacion: Invitacion | null };
+type Invitado = { quien: string; premioAmigo: string };
 
 const sinSuscripcion = () => () => {};
 const DIAS_VISIBLES = 14;
@@ -21,6 +23,11 @@ function etiquetaDia(fecha: string, hoy: string) {
   return new Intl.DateTimeFormat("es-MX", { weekday: "short", timeZone: "UTC" })
     .format(new Date(`${fecha}T12:00:00Z`))
     .replace(".", "");
+}
+
+// Código de quien invitó, si llegó con un link de recomendado (?r=CODIGO).
+function codigoDeInvitacion() {
+  return new URLSearchParams(window.location.search).get("r")?.toUpperCase() ?? "";
 }
 
 // Canal por el que llegó la persona: ?ref=tiktok, ?utm_source=instagram, etc.
@@ -43,6 +50,17 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [recarga, setRecarga] = useState(0);
+  const [invitado, setInvitado] = useState<Invitado | null>(null);
+
+  // Si llegó invitado por un amigo, se muestra quién lo invitó y su premio de bienvenida.
+  useEffect(() => {
+    const codigo = codigoDeInvitacion();
+    if (!codigo) return;
+    fetch(`/api/referidos?r=${encodeURIComponent(codigo)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && data.negocio?.slug === slug && setInvitado({ quien: data.quien, premioAmigo: data.premioAmigo }))
+      .catch(() => {});
+  }, [slug]);
 
   const dias = hoy
     ? Array.from({ length: Math.min(DIAS_VISIBLES, DIAS_MAXIMOS) }, (_, i) => sumarDias(hoy, i))
@@ -87,6 +105,7 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
           fecha: fechaElegida,
           hora,
           origen: origenDeLaVisita(),
+          referido: codigoDeInvitacion(),
         }),
       });
       const data = await res.json();
@@ -124,6 +143,7 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
         >
           Avisar por WhatsApp
         </a>
+        {resultado.invitacion && <TarjetaInvitar negocio={negocio.nombre} invitacion={resultado.invitacion} />}
       </div>
     );
   }
@@ -146,6 +166,22 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
 
   return (
     <form onSubmit={apartar} className="space-y-6">
+      {invitado && (
+        <div className="flex items-center gap-3 rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-200">
+          <span className="text-2xl" aria-hidden="true">
+            🎁
+          </span>
+          <p className="text-sm text-violet-950">
+            <b>{invitado.quien}</b> te invitó.
+            {invitado.premioAmigo && (
+              <>
+                {" "}
+                Recibes <b>{invitado.premioAmigo}</b> en tu primera visita.
+              </>
+            )}
+          </p>
+        </div>
+      )}
       <fieldset>
         <legend className="mb-2 font-semibold">1. ¿Qué te vas a hacer?</legend>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -283,5 +319,43 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
         . Apartar es gratis.
       </p>
     </form>
+  );
+}
+
+function TarjetaInvitar({ negocio, invitacion }: { negocio: string; invitacion: Invitacion }) {
+  const amigos = invitacion.meta === 1 ? "a un amigo" : `a ${invitacion.meta} amigos`;
+  const mensaje = [
+    `¡Te recomiendo ${negocio}! 🙌`,
+    invitacion.premioAmigo ? `Aparta con mi link y recibe ${invitacion.premioAmigo} en tu primera visita:` : "Aparta aquí tu cita:",
+    invitacion.link,
+  ].join("\n");
+  return (
+    <div className="mt-6 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 p-5 text-white">
+      <p className="text-2xl" aria-hidden="true">
+        🎁
+      </p>
+      <h4 className="mt-1 text-lg font-bold">Gana {invitacion.premioRecomienda}</h4>
+      <p className="mt-1 text-sm text-violet-100">
+        Invita {amigos} con tu link personal. Cuenta cuando tu amigo viene por primera vez.
+        {invitacion.premioAmigo && ` Ellos reciben ${invitacion.premioAmigo}.`}
+      </p>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(mensaje)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full bg-white px-5 py-2.5 text-center font-semibold text-violet-700 hover:bg-violet-50"
+        >
+          Invitar por WhatsApp
+        </a>
+        <a
+          href={invitacion.progreso}
+          className="rounded-full px-5 py-2.5 text-center font-semibold text-white ring-1 ring-white/60 hover:bg-white/10"
+        >
+          Ver mis recompensas
+        </a>
+      </div>
+      <p className="mt-3 text-xs text-violet-200">Aplican las condiciones del negocio.</p>
+    </div>
   );
 }

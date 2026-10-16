@@ -17,6 +17,7 @@ export type Cita = {
   origen: string;
   minutos: number | null;
   tipo: "cita" | "bloqueo";
+  referido_por: string | null;
   creada: string;
 };
 
@@ -59,6 +60,21 @@ export async function db(): Promise<postgres.Sql | null> {
     create index if not exists citas_negocio_fecha on citas (negocio, fecha);
     alter table citas add column if not exists minutos integer;
     alter table citas add column if not exists tipo text not null default 'cita';
+    alter table citas add column if not exists referido_por text;
+    create table if not exists referidos (
+      codigo text primary key,
+      negocio text not null,
+      telefono text not null,
+      nombre text not null,
+      creado timestamptz not null default now(),
+      unique (negocio, telefono)
+    );
+    create table if not exists canjes (
+      id uuid primary key default gen_random_uuid(),
+      negocio text not null,
+      telefono text not null,
+      creado timestamptz not null default now()
+    );
   `.simple().catch((error) => {
     esquema = null;
     throw error;
@@ -68,4 +84,4 @@ export async function db(): Promise<postgres.Sql | null> {
 }
 
 export const SELECT_CITA = `id, negocio, servicio_id, servicio, precio, fecha, hora, cliente,
-  telefono, email, estado, origen, minutos, tipo, creada`;
+  telefono, email, estado, origen, minutos, tipo, referido_por, creada`;

@@ -32,6 +32,14 @@ Los negocios con `demo: true` se muestran como "Ejemplo" y no se indexan en Goog
 
 Desde `/admin` entra a **Setup SEO e IA** de cada negocio y sigue las secciones en orden. Los perfiles que captures (Google Maps, reseñas, Bing, redes) se publican solos en la página del negocio como datos estructurados (`sameAs`), y el link de reseñas activa el botón **Pedir reseña** en la agenda cuando una cita queda atendida. El avance se guarda en la tabla `setup`.
 
+## Programa de recomendados
+
+Cada negocio lo activa en su setup y define los premios: lo que gana quien recomienda al juntar N amigos y lo que recibe el amigo en su primera visita.
+
+- Al apartar, el cliente recibe su link personal (`/n/negocio?ref=amigo&r=CODIGO`) y su página de avance (`/r/CODIGO`).
+- Un amigo cuenta solo si su **primera** visita atendida llegó con ese link y no es la misma persona.
+- En la agenda se ve quién recomendó a cada cliente (🤝), los premios pendientes (🎁) con el botón **Entregar premio**, y el botón **Invitar a recomendar** para mandarle su link por WhatsApp.
+
 ## Medir de dónde llegan las citas
 
 Comparte el link del negocio con `?ref=` según el canal, por ejemplo `/n/mi-barberia?ref=tiktok` o `?ref=qr`. El panel de administración agrupa las citas por ese canal.

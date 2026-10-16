@@ -31,7 +31,11 @@ type Cita = {
   origen: string;
   minutos: number | null;
   tipo: "cita" | "bloqueo";
+  referido_por: string | null;
 };
+
+type Recompensa = { amigos: number; disponibles: number; canjeados: number };
+type Programa = { activo: boolean; premioRecomienda: string; premioAmigo: string; meta: number };
 
 type Bloque = { cita: Cita; ini: number; fin: number; carril: number; carriles: number };
 type Aviso = { id: string; cita: Cita };
@@ -188,6 +192,10 @@ export function Panel({ slug }: { slug: string }) {
   const [citas, setCitas] = useState<Cita[] | null>(null);
   const [visitas, setVisitas] = useState<Record<string, number>>({});
   const [resenas, setResenas] = useState<string | null>(null);
+  const [programa, setPrograma] = useState<Programa | null>(null);
+  const [recompensas, setRecompensas] = useState<Record<string, Recompensa>>({});
+  const [invitadores, setInvitadores] = useState<Record<string, string>>({});
+  const [ocupado, setOcupado] = useState(false);
   const [hoy, setHoy] = useState("");
   const [ahora, setAhora] = useState(0);
   const [error, setError] = useState("");
@@ -220,6 +228,9 @@ export function Panel({ slug }: { slug: string }) {
       setCitas(lista);
       setVisitas(data.visitas ?? {});
       setResenas(data.resenas ?? null);
+      setPrograma(data.programa ?? null);
+      setRecompensas(data.recompensas ?? {});
+      setInvitadores(data.invitadores ?? {});
       setHoy(data.hoy);
       setAhora(ahoraEn(zona).minutos);
       setError("");
@@ -293,6 +304,35 @@ export function Panel({ slug }: { slug: string }) {
     conocidas.current?.add(data.id);
     await cargar();
     return null;
+  }
+
+  async function recomendados(accion: "canjear" | "invitar", cita: Cita) {
+    setOcupado(true);
+    const res = await fetch("/api/panel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ negocio: slug, k: llave, accion, telefono: cita.telefono, nombre: cita.cliente }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setOcupado(false);
+    if (!res.ok) {
+      window.alert(data.error ?? "No se pudo completar.");
+      return;
+    }
+    if (accion === "invitar" && programa) {
+      const amigos = programa.meta === 1 ? "un amigo" : `${programa.meta} amigos`;
+      const texto = [
+        `¡Hola ${cita.cliente}! En ${negocio.nombre} tenemos premios para ti 🎁`,
+        `Invita a ${amigos} con este link y gana ${programa.premioRecomienda}.`,
+        programa.premioAmigo ? `Tus amigos reciben ${programa.premioAmigo} en su primera visita.` : "",
+        data.link,
+        `Revisa tus recompensas aquí: ${data.progreso}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      window.open(`https://wa.me/${telefonoCompleto(cita.telefono)}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+    }
+    await cargar();
   }
 
   // Al tocar un espacio vacío del calendario se abre el alta en esa hora.
@@ -601,6 +641,8 @@ export function Panel({ slug }: { slug: string }) {
                             )}
                             {corto ? `${cita.hora} ${cita.cliente}` : cita.cliente}
                             {previas !== null && previas >= 2 && " ⭐"}
+                            {cita.referido_por && " 🤝"}
+                            {(recompensas[cita.telefono]?.disponibles ?? 0) > 0 && " 🎁"}
                           </p>
                           {!corto && (
                             <p className="truncate opacity-80">
@@ -693,6 +735,8 @@ export function Panel({ slug }: { slug: string }) {
               Bloqueado
             </li>
             <li className="flex items-center gap-2">⭐ Cliente frecuente</li>
+            <li className="flex items-center gap-2">🤝 Recomendado</li>
+            <li className="flex items-center gap-2">🎁 Premio por entregar</li>
           </ul>
           <p className="mt-6 text-xs text-stone-400">Tip: toca un espacio vacío del calendario para agregar una cita.</p>
         </aside>
@@ -758,6 +802,35 @@ export function Panel({ slug }: { slug: string }) {
                   );
                 })()}
 
+                {elegida.referido_por && (
+                  <div className="mt-3 rounded-2xl bg-violet-50 p-3 text-sm text-violet-950">
+                    🤝 Recomendado por <b>{invitadores[elegida.referido_por] ?? "un cliente"}</b>
+                    {programa?.premioAmigo && visitasPrevias(elegida) === 0 && (
+                      <span className="block text-violet-800">Premio de bienvenida: {programa.premioAmigo}</span>
+                    )}
+                  </div>
+                )}
+                {(recompensas[elegida.telefono]?.disponibles ?? 0) > 0 && programa && (
+                  <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-sm ring-1 ring-amber-300">
+                    <p className="font-semibold text-amber-950">
+                      🎁 Tiene {recompensas[elegida.telefono].disponibles}{" "}
+                      {recompensas[elegida.telefono].disponibles === 1 ? "premio" : "premios"}: {programa.premioRecomienda}
+                    </p>
+                    <p className="text-amber-900">Por recomendar a {recompensas[elegida.telefono].amigos} amigos.</p>
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`¿Entregar ${programa.premioRecomienda} a ${elegida.cliente}?`)) {
+                          recomendados("canjear", elegida);
+                        }
+                      }}
+                      disabled={ocupado}
+                      className="mt-2 w-full rounded-xl bg-amber-400 py-2 font-semibold text-amber-950 hover:bg-amber-300 disabled:opacity-50"
+                    >
+                      Entregar premio
+                    </button>
+                  </div>
+                )}
+
                 <dl className="mt-5 divide-y divide-stone-100 rounded-2xl bg-stone-50 text-sm">
                   {[
                     ["Servicio", elegida.servicio],
@@ -808,6 +881,17 @@ export function Panel({ slug }: { slug: string }) {
                   >
                     ⭐ Pedir reseña en Google
                   </a>
+                )}
+
+                {programa?.activo && elegida.telefono && (
+                  <button
+                    onClick={() => recomendados("invitar", elegida)}
+                    disabled={ocupado}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                  >
+                    🤝 Invitar a recomendar
+                    {recompensas[elegida.telefono]?.amigos ? ` · lleva ${recompensas[elegida.telefono].amigos}` : ""}
+                  </button>
                 )}
 
                 {elegida.estado !== "cancelada" && (
