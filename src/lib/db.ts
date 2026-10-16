@@ -15,6 +15,8 @@ export type Cita = {
   email: string | null;
   estado: Estado;
   origen: string;
+  minutos: number | null;
+  tipo: "cita" | "bloqueo";
   creada: string;
 };
 
@@ -55,6 +57,8 @@ export async function db(): Promise<postgres.Sql | null> {
       actualizada timestamptz not null default now()
     );
     create index if not exists citas_negocio_fecha on citas (negocio, fecha);
+    alter table citas add column if not exists minutos integer;
+    alter table citas add column if not exists tipo text not null default 'cita';
   `.simple().catch((error) => {
     esquema = null;
     throw error;
@@ -64,4 +68,4 @@ export async function db(): Promise<postgres.Sql | null> {
 }
 
 export const SELECT_CITA = `id, negocio, servicio_id, servicio, precio, fecha, hora, cliente,
-  telefono, email, estado, origen, creada`;
+  telefono, email, estado, origen, minutos, tipo, creada`;

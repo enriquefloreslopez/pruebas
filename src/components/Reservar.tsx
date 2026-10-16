@@ -52,7 +52,7 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
   useEffect(() => {
     if (!fechaElegida) return;
     let vigente = true;
-    fetch(`/api/disponibilidad?negocio=${slug}&fecha=${fechaElegida}`)
+    fetch(`/api/disponibilidad?negocio=${slug}&fecha=${fechaElegida}&servicio=${servicio}`)
       .then((res) => res.json())
       .then((data) => {
         if (!vigente) return;
@@ -63,7 +63,7 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
     return () => {
       vigente = false;
     };
-  }, [slug, fechaElegida, recarga]);
+  }, [slug, fechaElegida, servicio, recarga]);
 
   function elegirFecha(d: string) {
     setFecha(d);
@@ -162,7 +162,11 @@ export function Reservar({ slug, zona }: { slug: string; zona: string }) {
                   name="servicio-radio"
                   value={s.id}
                   checked={servicio === s.id}
-                  onChange={() => setServicio(s.id)}
+                  onChange={() => {
+                    setServicio(s.id);
+                    setHora("");
+                    setHoras(null);
+                  }}
                   className="sr-only"
                 />
                 <span className="block font-medium">{s.nombre}</span>

@@ -38,12 +38,12 @@ export function diaSemana(fecha: string): number {
   return new Date(`${fecha}T12:00:00Z`).getUTCDay();
 }
 
-const aMinutos = (hora: string) => {
+export const aMinutos = (hora: string) => {
   const [h, m] = hora.split(":").map(Number);
   return h * 60 + m;
 };
 
-const aHora = (minutos: number) =>
+export const aHora = (minutos: number) =>
   `${String(Math.floor(minutos / 60)).padStart(2, "0")}:${String(minutos % 60).padStart(2, "0")}`;
 
 // Horarios que el negocio ofrece en una fecha, sin considerar ocupación.
@@ -74,6 +74,54 @@ export function horariosFuturos(negocio: Negocio, fecha: string): string[] {
   const horas = horariosDelDia(negocio, fecha);
   if (fecha !== ahora.fecha) return horas;
   return horas.filter((h) => aMinutos(h) >= ahora.minutos + 30);
+}
+
+// Lo mínimo que hace falta saber de una cita o bloqueo para calcular la ocupación.
+export type Ocupante = {
+  hora: string;
+  minutos: number | null;
+  tipo: string;
+  estado: string;
+  servicio_id: string;
+};
+
+export function duracionDe(negocio: Negocio, o: Pick<Ocupante, "minutos" | "servicio_id">): number {
+  return o.minutos ?? negocio.servicios.find((s) => s.id === o.servicio_id)?.minutos ?? negocio.intervalo;
+}
+
+// Cuántos lugares están ocupados en cada horario del día. Un bloqueo ocupa todos los lugares.
+export function ocupacionDelDia(negocio: Negocio, fecha: string, ocupantes: Ocupante[]): Map<string, number> {
+  const horas = horariosDelDia(negocio, fecha);
+  const ocupacion = new Map(horas.map((h) => [h, 0]));
+  for (const o of ocupantes) {
+    if (o.estado === "cancelada") continue;
+    const ini = aMinutos(o.hora);
+    const fin = ini + duracionDe(negocio, o);
+    const peso = o.tipo === "bloqueo" ? negocio.capacidad : 1;
+    for (const h of horas) {
+      const m = aMinutos(h);
+      if (m < fin && m + negocio.intervalo > ini) ocupacion.set(h, ocupacion.get(h)! + peso);
+    }
+  }
+  return ocupacion;
+}
+
+// Para cada horario, si cabe un servicio de `minutos` sin pasar la capacidad ni la hora de cierre.
+export function horariosLibres(negocio: Negocio, fecha: string, ocupantes: Ocupante[], minutos: number) {
+  const rango = negocio.horario[diaSemana(fecha)];
+  if (!rango) return [];
+  const cierre = aMinutos(rango[1]);
+  const ocupacion = ocupacionDelDia(negocio, fecha, ocupantes);
+  const horas = [...ocupacion.keys()];
+  return horas.map((hora) => {
+    const ini = aMinutos(hora);
+    const libre =
+      ini + minutos <= cierre &&
+      horas
+        .filter((h) => aMinutos(h) >= ini && aMinutos(h) < ini + minutos)
+        .every((h) => ocupacion.get(h)! < negocio.capacidad);
+    return { hora, libre };
+  });
 }
 
 export function formatoFecha(fecha: string): string {

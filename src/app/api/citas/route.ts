@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getNegocio } from "@/data/catalogo";
 import { fechaValida, formatoFecha, horariosFuturos, limpiarOrigen } from "@/lib/agenda";
 import { db } from "@/lib/db";
+import { apartar } from "@/lib/reservas";
 import { emailFrom, getResend, ownerEmail } from "@/lib/services";
 import { formatPrice, whatsappLink } from "@/lib/site";
 import { cleanPhone, cleanText, escapeHtml, isEmail } from "@/lib/validation";
@@ -43,21 +44,14 @@ export async function POST(request: Request) {
     );
   }
 
-  // El candado evita que dos personas aparten el último lugar al mismo tiempo.
-  const id = await sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(hashtext(${`${negocio.slug}|${fecha}|${hora}`}))`;
-    const [{ total }] = await tx<{ total: number }[]>`
-      select count(*)::int as total from citas
-      where negocio = ${negocio.slug} and fecha = ${fecha} and hora = ${hora} and estado <> 'cancelada'
-    `;
-    if (total >= negocio.capacidad) return null;
-    const [fila] = await tx<{ id: string }[]>`
-      insert into citas (negocio, servicio_id, servicio, precio, fecha, hora, cliente, telefono, email, origen)
-      values (${negocio.slug}, ${servicio!.id}, ${servicio!.nombre}, ${servicio!.precio}, ${fecha},
-              ${hora}, ${cliente}, ${telefono!}, ${email || null}, ${origen})
-      returning id
-    `;
-    return fila.id;
+  const id = await apartar(sql, negocio, {
+    servicio: servicio!,
+    fecha,
+    hora,
+    cliente,
+    telefono: telefono!,
+    email: email || null,
+    origen,
   });
 
   if (!id) {

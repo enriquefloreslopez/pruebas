@@ -1,28 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getNegocio } from "@/data/catalogo";
-import { fechaValida, horariosFuturos } from "@/lib/agenda";
+import { fechaValida, horariosFuturos, horariosLibres } from "@/lib/agenda";
 import { db } from "@/lib/db";
+import { ocupantesDelDia } from "@/lib/reservas";
 
 export async function GET(request: NextRequest) {
-  const negocio = getNegocio(request.nextUrl.searchParams.get("negocio") ?? "");
-  const fecha = request.nextUrl.searchParams.get("fecha") ?? "";
+  const params = request.nextUrl.searchParams;
+  const negocio = getNegocio(params.get("negocio") ?? "");
+  const fecha = params.get("fecha") ?? "";
   if (!negocio) return NextResponse.json({ error: "Negocio no encontrado." }, { status: 404 });
   if (!fechaValida(negocio, fecha).ok) {
     return NextResponse.json({ error: "Fecha no válida." }, { status: 400 });
   }
 
-  const horas = horariosFuturos(negocio, fecha);
   const sql = await db().catch(() => null);
   if (!sql) return NextResponse.json({ enLinea: false, horas: [] });
 
-  const ocupadas = await sql<{ hora: string; total: number }[]>`
-    select hora, count(*)::int as total from citas
-    where negocio = ${negocio.slug} and fecha = ${fecha} and estado <> 'cancelada'
-    group by hora
-  `;
-  const porHora = new Map(ocupadas.map((r) => [r.hora, r.total]));
+  const servicio = negocio.servicios.find((s) => s.id === params.get("servicio"));
+  const minutos = servicio?.minutos ?? negocio.intervalo;
+  const futuras = new Set(horariosFuturos(negocio, fecha));
+  const ocupantes = await ocupantesDelDia(sql, negocio.slug, fecha);
   return NextResponse.json({
     enLinea: true,
-    horas: horas.map((hora) => ({ hora, libre: (porHora.get(hora) ?? 0) < negocio.capacidad })),
+    horas: horariosLibres(negocio, fecha, ocupantes, minutos).filter((h) => futuras.has(h.hora)),
   });
 }

@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   const citas = await sql<Cita[]>`
     select ${sql.unsafe(SELECT_CITA)} from citas
-    where creada > now() - interval '60 days'
+    where creada > now() - interval '60 days' and tipo = 'cita'
     order by creada desc
     limit 500
   `;
