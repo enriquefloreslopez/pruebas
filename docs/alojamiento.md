@@ -15,6 +15,42 @@ La plataforma viene empaquetada con Docker: la app, la base de datos PostgreSQL,
 - Un **dominio administrado en Cloudflare** (plan gratis) para el túnel.
 - Un **no-break** para el equipo y el módem.
 
+## Consumo de recursos
+
+Medido con el paquete funcionando y los límites de memoria puestos:
+
+| Momento | App | Base de datos | Total |
+| --- | --- | --- | --- |
+| En reposo | ~39 MB | ~27 MB | **~67 MB** |
+| 6,000 visitas con 50 a la vez | ~65 MB | ~35 MB | **~100 MB** |
+
+Cada servicio tiene un tope de memoria (app 320 MB, base de datos 256 MB, túnel 128 MB, respaldos 64 MB) y los registros de Docker se limitan a 10 MB por servicio. El túnel de Cloudflare y el sistema operativo suman aparte.
+
+**Compilar sí pesa (~1.5 GB por un par de minutos).** En equipos de 1-2 GB usa la imagen ya compilada:
+
+1. En GitHub: **Actions → Imagen Docker → Run workflow**, con tu dirección pública. Compila para x64 y ARM64.
+2. En el equipo, pon en `.env`: `IMAGEN_APP=ghcr.io/<tu-usuario>/<tu-repo>:nube`
+3. Si el repositorio es privado, inicia sesión una vez: `docker login ghcr.io` (usuario de GitHub y un token con permiso `read:packages`).
+4. Instala o actualiza con: `docker compose pull && docker compose up -d --no-build`
+
+### Equipos compatibles
+
+| Equipo | ¿Sirve? |
+| --- | --- |
+| Linux x64 / ARM64 (mini PC, Raspberry Pi 4/5 con sistema de 64 bits) | ✅ |
+| Windows x64 con Docker Desktop | ✅ (configura inicio automático y sin suspensión) |
+| x86 de 32 bits o ARM de 32 bits | ❌ |
+
+Con 1 GB de RAM funciona usando la imagen compilada y swap; con 2 GB va cómodo.
+
+### Preparar un equipo pequeño
+
+```bash
+sudo bash scripts/preparar-equipo.sh
+```
+
+Revisa que el procesador sea compatible, crea 2 GB de swap si hay menos de 3 GB de RAM, hace que el sistema use el swap solo cuando haga falta (cuida tarjetas SD y discos baratos) y limita los registros del sistema a 100 MB.
+
 ## 1. Crear el túnel de Cloudflare
 
 El túnel publica el sitio sin abrir puertos del módem.
@@ -51,7 +87,8 @@ Todo vuelve a arrancar solo si el equipo se reinicia.
 
 ```bash
 git pull
-docker compose up -d --build
+docker compose up -d --build                         # equipo normal
+docker compose pull && docker compose up -d --no-build   # con IMAGEN_APP
 ```
 
 ## 4. Respaldos

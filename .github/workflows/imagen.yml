@@ -1,0 +1,56 @@
+# Compila la imagen de la plataforma para x64 y ARM64 y la publica en GitHub Packages (ghcr.io),
+# para que los equipos pequeños solo la descarguen en vez de compilarla.
+# Se corre a mano: pestaña Actions > «Imagen Docker» > Run workflow.
+
+name: Imagen Docker
+
+on:
+  workflow_dispatch:
+    inputs:
+      sitio:
+        description: "Dirección pública (NEXT_PUBLIC_SITE_URL), ej. https://citas.tudominio.com"
+        required: true
+      whatsapp:
+        description: "WhatsApp de contacto (NEXT_PUBLIC_WHATSAPP_NUMBER), solo dígitos"
+        required: false
+        default: ""
+      etiqueta:
+        description: "Nombre de la versión, ej. nube o el slug de un negocio local"
+        required: true
+        default: "nube"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  imagen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nombre de la imagen en minúsculas
+        id: nombre
+        run: echo "imagen=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.nombre.outputs.imagen }}:${{ inputs.etiqueta }}
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ inputs.sitio }}
+            NEXT_PUBLIC_WHATSAPP_NUMBER=${{ inputs.whatsapp }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

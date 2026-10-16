@@ -1,23 +1,60 @@
 # Plataforma completa: app, base de datos, túnel de Cloudflare y respaldos diarios.
-# Uso: copia .env.docker.example como .env, llénalo y corre `docker compose up -d --build`.
+# Afinada para equipos de bajo consumo (1-2 GB de RAM, Raspberry Pi, mini PC).
+#
+# Equipo normal:   docker compose up -d --build
+# Equipo pequeño:  pon IMAGEN_APP en .env y corre `docker compose pull && docker compose up -d --no-build`
+#                  (descarga la imagen ya compilada en GitHub en vez de compilarla aquí).
+
+# Registros con tamaño máximo para que no llenen el disco con los meses.
+x-registros: &registros
+  logging:
+    driver: json-file
+    options:
+      max-size: "5m"
+      max-file: "2"
 
 services:
   db:
+    <<: *registros
     image: postgres:16-alpine
     restart: unless-stopped
+    # Ajustes para poca memoria y menos escrituras al disco.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=32MB
+      - -c
+      - max_connections=20
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=16MB
+      - -c
+      - effective_cache_size=128MB
+      - -c
+      - wal_buffers=1MB
+      - -c
+      - min_wal_size=32MB
+      - -c
+      - max_wal_size=256MB
+      - -c
+      - checkpoint_timeout=15min
     environment:
       POSTGRES_DB: citas
       POSTGRES_USER: citas
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en .env}
     volumes:
       - datos:/var/lib/postgresql/data
+    mem_limit: 256m
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U citas -d citas"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 10
 
   app:
+    <<: *registros
+    image: ${IMAGEN_APP:-citas-app:local}
     build:
       context: .
       args:
@@ -27,30 +64,37 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://citas:${POSTGRES_PASSWORD}@db:5432/citas
+      # Tope de memoria de Node.js, por debajo del límite del contenedor.
+      NODE_OPTIONS: --max-old-space-size=192
     depends_on:
       db:
         condition: service_healthy
+    mem_limit: 320m
     # En la nube se queda en 127.0.0.1 (solo el túnel entra). En un local, APP_BIND=0.0.0.0
     # permite abrir la agenda desde otros equipos de la red del negocio.
     ports:
       - "${APP_BIND:-127.0.0.1}:3000:3000"
 
   tunel:
+    <<: *registros
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Falta CLOUDFLARE_TUNNEL_TOKEN en .env}
+    mem_limit: 128m
     depends_on:
       - app
 
   respaldos:
+    <<: *registros
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./respaldos:/respaldos
+    mem_limit: 64m
     depends_on:
       db:
         condition: service_healthy
