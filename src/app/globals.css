@@ -16,3 +16,8 @@ body {
   background: #fafaf9;
   color: #1c1917;
 }
+
+/* Los fieldset no se encogen por defecto y desbordan las filas con scroll horizontal. */
+fieldset {
+  min-width: 0;
+}

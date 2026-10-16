@@ -1,20 +1,36 @@
 # CitaLista
 
-Página web, alta en Google Maps y agenda en línea con confirmación por WhatsApp para negocios que trabajan con citas (estéticas, barberías, consultorios, talleres).
+Plataforma para conseguir clientes a negocios locales que trabajan con citas: el cliente final ve horarios libres y aparta en línea, y el negocio recibe la cita en vivo en su panel. Empieza con barberías en Salamanca, pero sirve para cualquier giro.
 
 ## Qué incluye
 
 | Ruta | Qué es |
 | --- | --- |
-| `/` | Página de venta: problema, cómo funciona, precios con pago en Stripe, preguntas frecuentes y registro al boletín. |
-| `/demo/estetica` | Demo de un negocio ficticio con servicios, agenda en línea, horarios, mapa y WhatsApp. Es lo que se enseña a los clientes potenciales. |
-| `/gracias` | Página a la que llega el cliente después de pagar. |
-| `/api/checkout` | Crea el pago en Stripe (pago único o suscripción mensual). |
-| `/api/stripe/webhook` | Recibe de Stripe la confirmación de pago y te avisa por correo. |
-| `/api/reservas` | Recibe las citas de la demo y avisa por correo al negocio y al cliente. |
-| `/api/newsletter` | Guarda suscriptores del boletín en Resend. |
+| `/` | Portada para el cliente final, con ciudades y categorías. |
+| `/[ciudad]/[categoria]` | Lista de negocios (ej. `/salamanca/barberias`) con precios y preguntas frecuentes, preparada para Google y asistentes de IA. |
+| `/n/[negocio]` | Página del negocio con servicios, horario, mapa y apartado de citas con horarios libres en vivo. |
+| `/panel/[negocio]?k=…` | Panel privado del negocio: citas del día en vivo, confirmar, atendida, no llegó. |
+| `/admin?k=…` | Resultados del piloto: citas por canal (TikTok, Instagram, QR…) y por negocio, y links de cada panel. |
+| `/para-negocios` | Página de venta para negocios, con planes y pago en Stripe. |
+| `/api/citas`, `/api/disponibilidad`, `/api/panel`, `/api/admin` | Agenda: apartar, horarios libres, panel y administración. |
+| `/api/checkout`, `/api/stripe/webhook` | Cobros con Stripe. |
+| `/api/newsletter` | Suscriptores del boletín en Resend. |
 
-Para cambiar nombre, WhatsApp, planes y precios edita `src/lib/site.ts`. Los datos de la estética de ejemplo están en `src/lib/demo.ts`.
+## Agregar un negocio o un giro nuevo
+
+Todo vive en `src/data/catalogo.ts`:
+
+- **Negocio:** agrégalo a `negocios` con sus servicios, precios, horario y `capacidad` (cuántas citas atiende a la vez). Pide permiso al dueño antes de publicarlo.
+- **Giro nuevo** (dentistas, talleres…): agrégalo a `categorias`.
+- **Ciudad nueva:** agrégala a `ciudades`.
+
+Los negocios con `demo: true` se muestran como "Ejemplo" y no se indexan en Google.
+
+## Medir de dónde llegan las citas
+
+Comparte el link del negocio con `?ref=` según el canal, por ejemplo `/n/mi-barberia?ref=tiktok` o `?ref=qr`. El panel de administración agrupa las citas por ese canal.
+
+Para cambiar nombre, WhatsApp, planes y precios de venta edita `src/lib/site.ts`.
 
 ## Correr en tu computadora
 
@@ -45,10 +61,14 @@ El sitio funciona aunque falten las llaves: las citas se confirman por WhatsApp,
 2. Verifica tu dominio en **Domains** y pon un remitente de ese dominio en `RESEND_FROM_EMAIL`. Sin dominio verificado, Resend solo te entrega correos a ti.
 3. Para el boletín, crea un segmento en **Audience** y pon su ID en `RESEND_SEGMENT_ID`. Desde ahí mismo envías los boletines con **Broadcasts**.
 
+## Base de datos
+
+Las citas se guardan en Postgres. En Vercel: **Storage → Create Database → Neon**, conéctala al proyecto y Vercel agrega `DATABASE_URL` solo. La tabla se crea sola en la primera cita. Sin base de datos, el sitio funciona y el apartado se cambia a WhatsApp.
+
 ## Pendientes conocidos
 
-- Las citas no se guardan en una base de datos: llegan por correo y WhatsApp, y no se bloquean horarios ya ocupados. Siguiente paso: agregar una base de datos (por ejemplo Neon o Supabase desde el Marketplace de Vercel).
-- Los recordatorios automáticos por WhatsApp requieren la API de WhatsApp Business y aún no están integrados.
+- El panel se actualiza cada 15 segundos; los avisos por WhatsApp automáticos requieren la API de WhatsApp Business.
+- Cada cita ocupa un horario sin importar la duración del servicio.
 
 ## Validación del negocio
 

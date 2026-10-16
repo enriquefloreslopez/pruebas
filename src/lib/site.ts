@@ -87,6 +87,13 @@ export function formatPrice(amount: number): string {
   }).format(amount);
 }
 
+// URL pública del sitio: la variable propia o la que Vercel define para producción.
+export function siteUrl(): string {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  return "http://localhost:3000";
+}
+
 export function whatsappLink(message: string, phone = site.whatsapp): string {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }

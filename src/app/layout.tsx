@@ -9,9 +9,9 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: `${site.name} · Página web y agenda en línea para tu negocio`,
+  title: `${site.name} · Aparta tu cita en barberías, estéticas y más`,
   description:
-    "Página web, alta en Google Maps y agenda en línea con confirmación por WhatsApp para estéticas, barberías, consultorios y talleres.",
+    "Ve horarios libres y aparta tu cita en línea en barberías, estéticas y salones de uñas de tu ciudad.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
