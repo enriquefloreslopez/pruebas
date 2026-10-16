@@ -4,6 +4,7 @@ import { ahoraEn, ESTADOS, horariosDelDia, sumarDias, zonaDe, type Estado } from
 import { puedeVerPanel } from "@/lib/acceso";
 import { db, SELECT_CITA, type Cita } from "@/lib/db";
 import { apartar, bloquear } from "@/lib/reservas";
+import { leerSetup } from "@/lib/setup-db";
 import { cleanPhone, cleanText } from "@/lib/validation";
 
 // Citas del negocio desde hace 7 días hasta 30 días adelante, y visitas atendidas por cliente.
@@ -30,10 +31,12 @@ export async function GET(request: NextRequest) {
       group by telefono
     `,
   ]);
+  const setup = await leerSetup(slug).catch(() => null);
   return NextResponse.json({
     hoy,
     citas,
     visitas: Object.fromEntries(visitas.map((v) => [v.telefono, v.total])),
+    resenas: setup?.enlaces.resenas ?? null,
   });
 }
 

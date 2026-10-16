@@ -14,6 +14,7 @@ import {
   zonaDe,
   type Estado,
 } from "@/lib/agenda";
+import { mensajeResena } from "@/lib/setup";
 import { formatPrice, site } from "@/lib/site";
 
 type Cita = {
@@ -186,6 +187,7 @@ export function Panel({ slug }: { slug: string }) {
 
   const [citas, setCitas] = useState<Cita[] | null>(null);
   const [visitas, setVisitas] = useState<Record<string, number>>({});
+  const [resenas, setResenas] = useState<string | null>(null);
   const [hoy, setHoy] = useState("");
   const [ahora, setAhora] = useState(0);
   const [error, setError] = useState("");
@@ -217,6 +219,7 @@ export function Panel({ slug }: { slug: string }) {
       conocidas.current = new Set(lista.map((c) => c.id));
       setCitas(lista);
       setVisitas(data.visitas ?? {});
+      setResenas(data.resenas ?? null);
       setHoy(data.hoy);
       setAhora(ahoraEn(zona).minutos);
       setError("");
@@ -792,6 +795,19 @@ export function Panel({ slug }: { slug: string }) {
                       Llamar
                     </a>
                   </div>
+                )}
+
+                {elegida.estado === "atendida" && elegida.telefono && resenas && (
+                  <a
+                    href={`https://wa.me/${telefonoCompleto(elegida.telefono)}?text=${encodeURIComponent(
+                      mensajeResena(negocio, elegida.cliente, resenas),
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-amber-400 py-2.5 text-sm font-semibold text-amber-950 hover:bg-amber-300"
+                  >
+                    ⭐ Pedir reseña en Google
+                  </a>
                 )}
 
                 {elegida.estado !== "cancelada" && (

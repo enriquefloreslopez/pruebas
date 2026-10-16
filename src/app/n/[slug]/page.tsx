@@ -6,9 +6,18 @@ import { Reservar } from "@/components/Reservar";
 import { SiteFooter } from "@/components/SiteFooter";
 import { getCategoria, getCiudad, getNegocio, negocios } from "@/data/catalogo";
 import { zonaDe } from "@/lib/agenda";
-import { formatPrice, site, whatsappLink } from "@/lib/site";
+import { perfilesPublicos } from "@/lib/setup-db";
+import { formatPrice, site, siteUrl, whatsappLink } from "@/lib/site";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const NOMBRES_PERFIL = {
+  maps: "📍 Google Maps",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  bing: "Bing",
+  apple: "Apple Maps",
+} as const;
 const SCHEMA_DIAS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function generateStaticParams() {
@@ -38,6 +47,10 @@ export default async function PaginaNegocio({ params }: PageProps<"/n/[slug]">) 
   const { negocio, ciudad, categoria } = await cargar(params);
   const direccion = `${negocio.direccion}, ${negocio.colonia}, ${ciudad.nombre}, ${ciudad.estado}`;
   const mapa = `https://www.google.com/maps?q=${encodeURIComponent(direccion)}&output=embed`;
+  const perfiles = await perfilesPublicos(negocio.slug);
+  const redes = (["maps", "facebook", "instagram", "tiktok", "bing", "apple"] as const).flatMap((id) =>
+    perfiles[id] ? [{ id, url: perfiles[id]!, texto: NOMBRES_PERFIL[id] }] : [],
+  );
 
   return (
     <>
@@ -47,6 +60,9 @@ export default async function PaginaNegocio({ params }: PageProps<"/n/[slug]">) 
           "@type": categoria.schemaType,
           name: negocio.nombre,
           description: negocio.descripcion,
+          url: `${siteUrl()}/n/${negocio.slug}`,
+          ...(redes.length > 0 ? { sameAs: redes.map((r) => r.url) } : {}),
+          ...(perfiles.maps ? { hasMap: perfiles.maps } : {}),
           telephone: `+${negocio.whatsapp}`,
           address: {
             "@type": "PostalAddress",
@@ -147,6 +163,32 @@ export default async function PaginaNegocio({ params }: PageProps<"/n/[slug]">) 
             >
               ¿Dudas? Escríbeles por WhatsApp
             </a>
+            {redes.length > 0 && (
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {redes.map((r) => (
+                  <li key={r.id}>
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block rounded-full bg-white px-3 py-1.5 text-sm font-medium ring-1 ring-stone-200 hover:ring-teal-600"
+                    >
+                      {r.texto}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {perfiles.resenas && (
+              <a
+                href={perfiles.resenas}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-block text-sm font-medium text-teal-700 underline"
+              >
+                ⭐ ¿Ya viniste? Déjales tu reseña en Google
+              </a>
+            )}
           </div>
 
           <section id="apartar" className="h-fit min-w-0 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-stone-200 lg:sticky lg:top-20">

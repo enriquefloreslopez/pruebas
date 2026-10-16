@@ -134,9 +134,17 @@ export function Admin() {
         <ul className="mt-4 space-y-4">
           {datos.paneles.map((p) => (
             <li key={p.slug} className="border-t border-stone-100 pt-4">
-              <p className="font-semibold">
-                {p.nombre} {p.demo && <span className="text-xs font-normal text-stone-500">(ejemplo)</span>}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">
+                  {p.nombre} {p.demo && <span className="text-xs font-normal text-stone-500">(ejemplo)</span>}
+                </p>
+                <a
+                  href={`/admin/setup/${p.slug}?k=${encodeURIComponent(llave)}`}
+                  className="rounded-lg bg-teal-700 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-800"
+                >
+                  Setup SEO e IA →
+                </a>
+              </div>
               <p className="mt-1 break-all text-sm">
                 Panel:{" "}
                 {p.panel ? (

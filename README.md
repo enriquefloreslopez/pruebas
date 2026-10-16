@@ -11,6 +11,8 @@ Plataforma para conseguir clientes a negocios locales que trabajan con citas: el
 | `/n/[negocio]` | Página del negocio con servicios, horario, mapa y apartado de citas con horarios libres en vivo. |
 | `/panel/[negocio]?k=…` | Panel privado del negocio: citas del día en vivo, confirmar, atendida, no llegó. |
 | `/admin?k=…` | Resultados del piloto: citas por canal (TikTok, Instagram, QR…) y por negocio, y links de cada panel. |
+| `/admin/setup/[negocio]?k=…` | Setup de cada negocio nuevo: revisión automática, ficha oficial para copiar, pasos de Google, Bing, Apple y redes, QR de reseñas y pruebas en asistentes de IA. |
+| `/llms.txt` | Resumen del sitio para asistentes de IA. |
 | `/para-negocios` | Página de venta para negocios, con planes y pago en Stripe. |
 | `/api/citas`, `/api/disponibilidad`, `/api/panel`, `/api/admin` | Agenda: apartar, horarios libres, panel y administración. |
 | `/api/checkout`, `/api/stripe/webhook` | Cobros con Stripe. |
@@ -25,6 +27,10 @@ Todo vive en `src/data/catalogo.ts`:
 - **Ciudad nueva:** agrégala a `ciudades`.
 
 Los negocios con `demo: true` se muestran como "Ejemplo" y no se indexan en Google.
+
+## Setup de un negocio nuevo (SEO e IA)
+
+Desde `/admin` entra a **Setup SEO e IA** de cada negocio y sigue las secciones en orden. Los perfiles que captures (Google Maps, reseñas, Bing, redes) se publican solos en la página del negocio como datos estructurados (`sameAs`), y el link de reseñas activa el botón **Pedir reseña** en la agenda cuando una cita queda atendida. El avance se guarda en la tabla `setup`.
 
 ## Medir de dónde llegan las citas
 
@@ -68,7 +74,6 @@ Las citas se guardan en Postgres. En Vercel: **Storage → Create Database → N
 ## Pendientes conocidos
 
 - El panel se actualiza cada 15 segundos; los avisos por WhatsApp automáticos requieren la API de WhatsApp Business.
-- Cada cita ocupa un horario sin importar la duración del servicio.
 
 ## Validación del negocio
 
