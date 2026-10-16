@@ -26,16 +26,25 @@ export type ProgramaReferidos = {
   meta: number;
 };
 
+export type Alojamiento = "nube" | "local";
+
 export type SetupDatos = {
   pasos: Record<string, boolean>;
   enlaces: Partial<Record<EnlaceId, string>>;
   pruebas: PruebaIA[];
   referidos: ProgramaReferidos;
+  alojamiento: Alojamiento;
 };
 
 export const REFERIDOS_VACIO: ProgramaReferidos = { activo: false, premioRecomienda: "", premioAmigo: "", meta: 1 };
 
-export const SETUP_VACIO: SetupDatos = { pasos: {}, enlaces: {}, pruebas: [], referidos: REFERIDOS_VACIO };
+export const SETUP_VACIO: SetupDatos = {
+  pasos: {},
+  enlaces: {},
+  pruebas: [],
+  referidos: REFERIDOS_VACIO,
+  alojamiento: "nube",
+};
 
 export type Paso = { id: string; titulo: string; detalle: string; herramienta?: { texto: string; url: string } };
 export type Seccion = { id: string; titulo: string; descripcion: string; pasos: Paso[] };
@@ -152,6 +161,57 @@ export const SECCIONES: Seccion[] = [
   },
 ];
 
+// Pasos para instalar la plataforma en un equipo dentro del negocio (opción local).
+export const PASOS_LOCAL: Paso[] = [
+  {
+    id: "local-equipo",
+    titulo: "Equipo dedicado",
+    detalle: "Una mini PC o computadora con Ubuntu que se use solo para esto y quede encendida siempre.",
+  },
+  {
+    id: "local-ups",
+    titulo: "No-break (UPS)",
+    detalle: "Conecta el equipo y el módem a un no-break: un apagón no debe tirar la página de citas.",
+  },
+  {
+    id: "local-internet",
+    titulo: "Internet estable",
+    detalle: "Revisa la velocidad y que el contrato del negocio permita tener un servicio en línea.",
+  },
+  {
+    id: "local-docker",
+    titulo: "Instalar Docker",
+    detalle: "Docker Engine con el complemento Compose.",
+    herramienta: { texto: "Guía de Docker", url: "https://docs.docker.com/engine/install/ubuntu/" },
+  },
+  {
+    id: "local-tunel",
+    titulo: "Túnel de Cloudflare",
+    detalle: "Crea un túnel con el dominio del negocio apuntando a http://app:3000 y copia su token al .env.",
+    herramienta: { texto: "Abrir Cloudflare", url: "https://one.dash.cloudflare.com/" },
+  },
+  {
+    id: "local-env",
+    titulo: "Archivo .env del local",
+    detalle: "Copia .env.docker.example como .env y agrega las líneas de abajo para este negocio.",
+  },
+  {
+    id: "local-arranque",
+    titulo: "Encender",
+    detalle: "Corre «docker compose up -d --build». Todo vuelve a arrancar solo si se reinicia el equipo.",
+  },
+  {
+    id: "local-agenda",
+    titulo: "Agenda en los equipos del local",
+    detalle: "Guarda en favoritos la agenda con la IP del equipo (abajo). Desde internet no abre.",
+  },
+  {
+    id: "local-respaldo",
+    titulo: "Respaldos fuera del local",
+    detalle: "Cada semana copia la carpeta «respaldos» a una USB o a la nube. Si el equipo se daña, ahí están las citas.",
+  },
+];
+
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export function horarioTexto(negocio: Negocio): string {
@@ -240,7 +300,7 @@ export const ASISTENTES = [
 // Normaliza y valida lo que llega del formulario de setup.
 export function limpiarSetup(entrada: unknown): SetupDatos {
   const e = (entrada ?? {}) as Partial<SetupDatos>;
-  const idsPasos = new Set(SECCIONES.flatMap((s) => s.pasos.map((p) => p.id)));
+  const idsPasos = new Set([...SECCIONES.flatMap((s) => s.pasos), ...PASOS_LOCAL].map((p) => p.id));
   const pasos = Object.fromEntries(
     Object.entries(e.pasos ?? {}).filter(([id, v]) => idsPasos.has(id) && typeof v === "boolean"),
   );
@@ -273,5 +333,6 @@ export function limpiarSetup(entrada: unknown): SetupDatos {
     premioAmigo,
     meta: Number.isInteger(r.meta) ? Math.min(10, Math.max(1, r.meta!)) : 1,
   };
-  return { pasos, enlaces, pruebas, referidos };
+  const alojamiento: Alojamiento = e.alojamiento === "local" ? "local" : "nube";
+  return { pasos, enlaces, pruebas, referidos, alojamiento };
 }

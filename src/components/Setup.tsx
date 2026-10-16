@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import { getNegocio } from "@/data/catalogo";
-import { ASISTENTES, ENLACES, SECCIONES, type SetupDatos } from "@/lib/setup";
+import { ASISTENTES, ENLACES, PASOS_LOCAL, SECCIONES, type Alojamiento, type SetupDatos } from "@/lib/setup";
 
 type Chequeo = { id: string; texto: string; ok: boolean; ayuda: string };
 type Ficha = {
@@ -132,11 +132,17 @@ export function Setup({ slug }: { slug: string }) {
   if (!respuesta || !datos) return <p className="text-stone-500">Cargando setup…</p>;
 
   const { chequeos, ficha, consultas } = respuesta;
-  const pasos = SECCIONES.flatMap((s) => s.pasos);
+  const pasos = [...SECCIONES.flatMap((s) => s.pasos), ...(datos.alojamiento === "local" ? PASOS_LOCAL : [])];
   const hechos = pasos.filter((p) => datos.pasos[p.id]).length + chequeos.filter((c) => c.ok).length;
   const total = pasos.length + chequeos.length;
   const progreso = Math.round((hechos / total) * 100);
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
+  const envLocal = [
+    `SOLO_NEGOCIO=${slug}`,
+    "PANEL_SOLO_LOCAL=true",
+    "APP_BIND=0.0.0.0",
+    "NEXT_PUBLIC_SITE_URL=https://citas.dominio-del-negocio.com",
+  ].join("\n");
 
   const marcar = (id: string, valor: boolean) => cambiar((d) => ({ ...d, pasos: { ...d.pasos, [id]: valor } }));
   const registrarPrueba = (asistente: string, consulta: string, aparece: boolean) =>
@@ -455,6 +461,87 @@ export function Setup({ slug }: { slug: string }) {
           )}
         </Bloque>
       ))}
+
+      <Bloque
+        titulo={`${SECCIONES.length + 5}. Alojamiento`}
+        descripcion="Dónde corre la plataforma para este negocio. La nube es lo recomendado; el equipo local es para negocios que quieren su agenda dentro de su red."
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              ["nube", "☁️ En la nube (recomendado)", "Vive en la instalación central con los demás negocios. No necesita equipo en el local y la agenda abre desde cualquier celular."],
+              ["local", "🏪 Equipo en el local", "Una computadora del negocio con su internet. La página de citas sale a internet por Cloudflare y la agenda solo abre dentro del local."],
+            ] as const
+          ).map(([id, titulo, texto]) => (
+            <label
+              key={id}
+              className={`cursor-pointer rounded-2xl p-4 ring-1 transition ${
+                datos.alojamiento === id ? "bg-teal-50 ring-2 ring-teal-600" : "ring-stone-200 hover:ring-stone-400"
+              }`}
+            >
+              <input
+                type="radio"
+                name="alojamiento"
+                value={id}
+                checked={datos.alojamiento === id}
+                onChange={() => cambiar((d) => ({ ...d, alojamiento: id as Alojamiento }))}
+                className="sr-only"
+              />
+              <span className="block font-semibold">{titulo}</span>
+              <span className="mt-1 block text-sm text-stone-600">{texto}</span>
+            </label>
+          ))}
+        </div>
+
+        {datos.alojamiento === "local" && (
+          <>
+            <div className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-950">
+              <b>Ten en cuenta:</b> si en el local se va la luz o el internet, o apagan el equipo, nadie puede apartar.
+              El dueño tampoco verá su agenda fuera del local. Cuida el no-break y los respaldos.
+            </div>
+            <ul className="mt-4 space-y-2">
+              {PASOS_LOCAL.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex gap-3 rounded-xl p-3 ring-1 ring-stone-200 has-[:checked]:bg-emerald-50 has-[:checked]:ring-emerald-200"
+                >
+                  <input
+                    id={p.id}
+                    type="checkbox"
+                    checked={!!datos.pasos[p.id]}
+                    onChange={(e) => marcar(p.id, e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-teal-700"
+                  />
+                  <label htmlFor={p.id} className="min-w-0 flex-1 text-sm">
+                    <span className="block font-semibold">{p.titulo}</span>
+                    <span className="text-stone-600">{p.detalle}</span>
+                  </label>
+                  {p.herramienta && (
+                    <a
+                      href={p.herramienta.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-fit shrink-0 rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-medium text-white"
+                    >
+                      {p.herramienta.texto}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 rounded-2xl bg-stone-900 p-4 text-sm text-stone-100">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold">Líneas para el .env de este local</p>
+                <Copiar texto={envLocal} />
+              </div>
+              <pre className="mt-2 overflow-x-auto text-xs leading-relaxed text-emerald-300">{envLocal}</pre>
+              <p className="mt-3 text-xs text-stone-400">
+                Agenda dentro del local: http://IP-DEL-EQUIPO:3000/panel/{slug}?k=… (la misma llave del panel en la nube).
+              </p>
+            </div>
+          </>
+        )}
+      </Bloque>
     </div>
   );
 }

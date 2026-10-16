@@ -1,0 +1,8 @@
+.git
+.next
+node_modules
+respaldos
+# Nunca meter llaves en la imagen: las variables llegan al correr el contenedor.
+.env*
+npm-debug.log*
+*.tsbuildinfo

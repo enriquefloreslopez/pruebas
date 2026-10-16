@@ -56,6 +56,10 @@ npm run dev                  # abre http://localhost:3000
 
 El sitio funciona aunque falten las llaves: las citas se confirman por WhatsApp, y los botones de pago y de boletín muestran un aviso de que aún no están configurados.
 
+## Alojamiento propio con Docker
+
+Además de Vercel, la plataforma corre en un servidor propio, un servidor rentado o un equipo dentro de un negocio con `docker compose up -d --build` (app, PostgreSQL, túnel de Cloudflare y respaldos diarios). La guía completa está en `docs/alojamiento.md` y las variables en `.env.docker.example`.
+
 ## Publicar en Vercel
 
 1. Entra a [vercel.com/new](https://vercel.com/new) e importa este repositorio de GitHub.
